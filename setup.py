@@ -10,9 +10,9 @@ from wotpy.support import is_coap_supported, is_dnssd_supported, is_mqtt_support
 
 install_requires = [
     "tornado>=6.1,<7.0",
-    "jsonschema>=2.0,<3.0",
+    "jsonschema>=4.23",
     "rx>=1.6.0,<2.0",
-    "python-slugify>=1.2.4,<2.0",
+    "python-slugify>=7.0",
 ]
 
 test_requires = [
@@ -59,15 +59,14 @@ setup(
     keywords="wot iot gateway fog w3c",
     author="Andres Garcia Mangas",
     author_email="andres.garcia@fundacionctic.org",
-    url="https://github.com/agmangas/wot-py",
+    url="https://github.com/wDove1/wot-py",
+    python_requires = ">=3.9",
     classifiers=[
         "Development Status :: 4 - Beta",
         "Intended Audience :: Developers",
         "Natural Language :: English",
         "Operating System :: OS Independent",
         "License :: OSI Approved :: MIT License",
-        "Programming Language :: Python :: 3.7",
-        "Programming Language :: Python :: 3.8",
         "Programming Language :: Python :: 3.9",
         "Programming Language :: Python :: 3.10",
     ],
