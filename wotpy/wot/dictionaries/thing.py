@@ -26,13 +26,15 @@ class ThingFragment(WotBaseDict):
 
     class Meta:
         fields = {
+            "@context",
+            "@type",
             "id",
-            "version",
             "title",
             "description",
-            "support",
+            "version",
             "created",
             "lastModified",
+            "support",
             "base",
             "properties",
             "actions",
@@ -47,6 +49,8 @@ class ThingFragment(WotBaseDict):
         fields_readonly = ["id"]
 
         fields_str = [
+            "@context",
+            "@type",
             "title",
             "description",
             "support",
@@ -101,7 +105,7 @@ class ThingFragment(WotBaseDict):
             return
 
     @property
-    def title(self):
+    def title(self) -> str:
         """The title of the Thing.
         This property returns the ID if the title is undefined."""
 

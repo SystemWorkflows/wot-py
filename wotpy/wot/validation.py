@@ -148,11 +148,25 @@ SCHEMA_VERSIONING = {
     "required": ["instance"],
 }
 
+SCHEMA_CONTEXT = {
+    "$schema": "http://json-schema.org/schema#",
+    "oneOf":[{"type": "array", "items": {"type":"string", "format":"uri"}}, 
+    {"type":"string", "format":"uri"}]
+}
+
+SCHEMA_TYPE = {
+    "$schema": "http://json-schema.org/schema#",
+    "oneOf":[{"type": "array", "items": {"type":"string",}}, 
+    {"type":"string"}]
+}
+
 SCHEMA_THING = {
     "$schema": "http://json-schema.org/schema#",
     "id": "http://fundacionctic.org/schemas/thing.json",
     "type": "object",
     "properties": {
+        "@context": SCHEMA_CONTEXT,
+        "@type": SCHEMA_TYPE, 
         "id": {"type": "string", "pattern": REGEX_ANY_URI},
         "version": SCHEMA_VERSIONING,
         "title": {"type": "string"},
@@ -184,7 +198,7 @@ SCHEMA_THING = {
             "additionalProperties": False,
         },
     },
-    "required": ["id", "title", "security", "securityDefinitions"],
+    "required": ["id", "@context", "title", "security", "securityDefinitions"],
 }
 
 

@@ -23,13 +23,22 @@ class ThingDescription(object):
         """Constructor.
         Validates that the document conforms to the TD schema."""
 
-        self._doc = json.loads(doc) if isinstance(doc, (str, bytes)) else doc
+        self._doc:dict = json.loads(doc) if isinstance(doc, (str, bytes)) else doc
+        if("@type" in self._doc):
+            if (self._doc["@type"] == "tm:ThingModel"):
+                self._doc["@type"] = "Thing"
+            elif self._doc["@type"] is list:
+                self._doc["@type"] = list(map(lambda x: "Thing" if x == "tm:ThingModel" else x, self._doc["@type"]))
+        else:
+            self._doc["@type"] == "Thing"
+        
+
         self._thing_fragment = ThingFragment(self._doc)
 
         self.validate(doc=self._thing_fragment.to_dict())
 
     @classmethod
-    def validate(cls, doc):
+    def validate(cls, doc: dict):
         """Validates the given Thing Description document against its schema.
         Raises ValidationError if validation fails."""
 
@@ -39,12 +48,12 @@ class ThingDescription(object):
             raise InvalidDescription(str(ex)) from ex
 
     @classmethod
-    def from_thing(cls, thing):
+    def from_thing(cls, thing: Thing):
         """Builds an instance of a JSON-serialized Thing Description from a Thing object."""
 
         return ThingDescription(thing.thing_fragment.to_dict())
 
-    def __getattr__(self, name):
+    def __getattr__(self, name: str):
         """Search for members that raised an AttributeError in
         the internal ThingFragment before propagating the exception."""
 
@@ -70,7 +79,7 @@ class ThingDescription(object):
 
         return Thing(thing_fragment=self.to_thing_fragment())
 
-    def get_forms(self, name):
+    def get_forms(self, name: str):
         """Returns a list of FormDict for the interaction that matches the given name."""
 
         if name in self.properties:
