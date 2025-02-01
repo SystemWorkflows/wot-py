@@ -216,12 +216,11 @@ class WoT(object):
         return ConsumedThing(servient=self._servient, td=td)
 
     @classmethod
-    def thing_from_model(cls, model):
+    def thing_from_model(cls, model: str|ThingFragment|ConsumedThing):
         """Takes a ThingModel and builds a Thing.
         Raises if the model has an unexpected type."""
 
         expected_types = (str, ThingFragment, ConsumedThing)
-
         if not isinstance(model, expected_types):
             raise ValueError("Expected one of: {}".format(expected_types))
 
@@ -234,7 +233,7 @@ class WoT(object):
 
         return thing
 
-    def produce(self, model):
+    def produce(self, model: str|ThingFragment|ConsumedThing):
         """Accepts a model argument of type ThingModel and returns an ExposedThing
         object, locally created based on the provided initialization parameters."""
 
@@ -265,7 +264,7 @@ class WoT(object):
     async def register(self, directory, thing):
         """Generate the Thing Description as td, given the Properties,
         Actions and Events defined for this ExposedThing object.
-        Then make a request to register td to the given WoT Thing Directory."""
+        Then make a request to register the td to the given WoT Thing Directory."""
 
         raise NotImplementedError()
 

@@ -4,6 +4,7 @@
 """
 Class that represents a Thing consumed by a servient.
 """
+from wotpy.wot.td import ThingDescription
 
 from rx.concurrency import IOLoopScheduler
 
@@ -18,7 +19,7 @@ class ConsumedThing(object):
     """An entity that serves to interact with a Thing.
     An application uses this class when it acts as a *client* of the Thing."""
 
-    def __init__(self, servient, td):
+    def __init__(self, servient, td: ThingDescription):
         self._servient = servient
         self._td = td
 
@@ -38,7 +39,7 @@ class ConsumedThing(object):
         return self._servient
 
     @property
-    def td(self):
+    def td(self) -> ThingDescription:
         """Returns the ThingDescription instance that represents
         the TD that this Consumed Thing is based on."""
 

@@ -57,7 +57,7 @@ class ExposedThing(object):
 
         PROPERTY_VALUES = "property_values"
 
-    def __init__(self, servient, thing):
+    def __init__(self, servient, thing: Thing):
         self._servient = servient
         self._thing = thing
 

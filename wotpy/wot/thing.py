@@ -34,7 +34,7 @@ class Thing(object):
 
     assert THING_FRAGMENT_WRITABLE_FIELDS.issubset(ThingFragment.Meta.fields)
 
-    def __init__(self, thing_fragment=None, **kwargs):
+    def __init__(self, thing_fragment: ThingFragment|None = None, **kwargs):
         self._thing_fragment = (
             thing_fragment if thing_fragment else ThingFragment(**kwargs)
         )
