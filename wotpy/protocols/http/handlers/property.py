@@ -24,7 +24,12 @@ class PropertyReadWriteHandler(RequestHandler):
 
         exposed_thing = handler_utils.get_exposed_thing(self._server, thing_name)
         value = await exposed_thing.properties[name].read()
-        self.write({"value": value})
+        if type(value) == int or type(value) == float or type(value) == bool:
+            value = str(value)
+        if type(value) == str:
+            value = "\"" + value + "\""
+        print("value: ", value)
+        self.write(value)#{"value": value})# should cover most cases
 
     async def put(self, thing_name, name):
         """Updates the Property value."""
@@ -61,7 +66,7 @@ class PropertyObserverHandler(RequestHandler):
 
         self.subscription = thing_property.subscribe(on_next=on_next, on_error=on_error)
         updated_value = await future_next
-        self.write({"value": updated_value})
+        self.write(updated_value)
 
     def on_finish(self):
         """Destroys the subscription to the observable when the request finishes."""

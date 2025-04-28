@@ -25,12 +25,18 @@ class ActionInvokeHandler(RequestHandler):
         """Invokes the action and returns the invocation result."""
 
         exposed_thing = handler_utils.get_exposed_thing(self._server, thing_name)
-        input_value = handler_utils.get_argument(self, "input")
-        future_result = exposed_thing.actions[name].invoke(input_value)
-        invocation_id = uuid.uuid4().hex
-        self._server.pending_actions[invocation_id] = future_result
-        self.write({"invocation": "/invocation/{}".format(invocation_id)})
-
+        #input_value = handler_utils.get_argument(self, "input")
+        input_value = self.request.body# rework this properly
+        result = await exposed_thing.actions[name].invoke(input_value)
+        #invocation_id = uuid.uuid4().hex
+        #self._server.pending_actions[invocation_id] = future_result
+        #self.write({"invocation": "/invocation/{}".format(invocation_id)})
+        if type(result) == int or type(result) == float or type(result) == bool:
+            result = str(result)
+        if type(result) == str:
+            result = "\"" + result + "\""
+        print("value: ", result)
+        self.write(result)
 
 class PendingInvocationHandler(RequestHandler):
     """Handler to check the status of pending action invocations."""

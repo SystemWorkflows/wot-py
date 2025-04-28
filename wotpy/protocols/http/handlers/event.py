@@ -40,7 +40,7 @@ class EventObserverHandler(RequestHandler):
 
         self.subscription = thing_event.subscribe(on_next=on_next, on_error=on_error)
         event_payload = await future_next
-        self.write({"payload": event_payload})
+        self.write(event_payload)
 
     def on_finish(self):
         """Destroys the subscription to the observable when the request finishes."""
