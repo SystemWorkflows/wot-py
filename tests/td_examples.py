@@ -4,6 +4,9 @@
 TD_EXAMPLE = {
     "id": "urn:dev:wot:com:example:servient:lamp",
     "title": "MyLampThing",
+    "@context": [
+    "https://www.w3.org/2019/wot/td/v1"
+    ],
     "description": "MyLampThing uses JSON-LD 1.1 serialization",
     "security": ["nosec_sc"],
     "securityDefinitions": {
