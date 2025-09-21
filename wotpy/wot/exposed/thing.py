@@ -211,10 +211,10 @@ class ExposedThing(object):
         Property on the remote Thing and return the result. Returns a Future
         that resolves with the Property value or rejects with an Error."""
 
-        proprty = self.thing.properties[name]
+        property = self.thing.properties[name]
 
         handler = self._handlers.get(self.HandlerKeys.RETRIEVE_PROPERTY, {}).get(
-            proprty, None
+            property, None
         )
 
         if handler:
@@ -230,13 +230,13 @@ class ExposedThing(object):
         Bindings to update the Property on the remote Thing and return the result.
         Returns a Future that resolves on success or rejects with an Error."""
 
-        proprty = self.thing.properties[name]
+        property = self.thing.properties[name]
 
-        if not proprty.writable:
+        if not property.writable:
             raise TypeError("Property is non-writable")
 
         handler = self._handlers.get(self.HandlerKeys.UPDATE_PROPERTY, {}).get(
-            proprty, None
+            property, None
         )
 
         if handler:
@@ -374,7 +374,7 @@ class ExposedThing(object):
 
     def add_action(self, name, action_init, action_handler=None):
         """Adds an Action to the Thing object as defined by the action
-        argument of type ThingActionInit and updates th,e Thing Description."""
+        argument of type ThingActionInit and updates the Thing Description."""
 
         if isinstance(action_init, dict):
             action_init = ActionFragmentDict(action_init)

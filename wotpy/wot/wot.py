@@ -191,7 +191,7 @@ class WoT(object):
         return Observable.merge(*observables)
 
     @classmethod
-    async def fetch(cls, url, timeout_secs=None):
+    async def fetch(cls, url: str, timeout_secs: float | None = None):
         """Accepts an url argument and returns a Future
         that resolves with a Thing Description string."""
 
@@ -243,7 +243,7 @@ class WoT(object):
 
         return exposed_thing
 
-    async def produce_from_url(self, url, timeout_secs=None):
+    async def produce_from_url(self, url: str, timeout_secs: float | None = None):
         """Return a Future that resolves to an ExposedThing created
         from the thing description retrieved from the given URL."""
 
@@ -252,7 +252,7 @@ class WoT(object):
 
         return exposed_thing
 
-    async def consume_from_url(self, url, timeout_secs=None):
+    async def consume_from_url(self, url: str, timeout_secs: float | None = None):
         """Return a Future that resolves to a ConsumedThing created
         from the thing description retrieved from the given URL."""
 
@@ -261,14 +261,35 @@ class WoT(object):
 
         return consumed_thing
 
-    async def register(self, directory, thing):
+    async def register(self, directory: str, thing: Thing | ExposedThing):
         """Generate the Thing Description as td, given the Properties,
         Actions and Events defined for this ExposedThing object.
-        Then make a request to register the td to the given WoT Thing Directory."""
+        Then make a request to register the td to the given WoT Thing Directory.
+        """
+        if isinstance(thing, ExposedThing):
+            thing = thing.thing
 
-        raise NotImplementedError()
+        td = ThingDescription.from_thing(thing)
+        td = td.to_dict()
+        body = json.dumps(td)
+        print(body)
+        http_client = tornado.httpclient.AsyncHTTPClient()
+        href = directory+"/"+td["id"]
+        try:
+            http_request = tornado.httpclient.HTTPRequest(
+                url=href,
+                method="POST",
+                body=body,
+                headers={"Content-Type": "application/json"},
+                connect_timeout=2,
+                request_timeout=2
+            )
+        except:
+            raise Exception
 
-    async def unregister(self, directory, thing):
+        response = await http_client.fetch(http_request)
+
+    async def unregister(self, directory: ConsumedThing, thing: ExposedThing):
         """Makes a request to unregister the thing from the given WoT Thing Directory."""
 
         raise NotImplementedError()
