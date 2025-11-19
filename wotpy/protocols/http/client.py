@@ -222,7 +222,7 @@ class HTTPClient(BaseProtocolClient):
 
         await http_client.fetch(http_request)
 
-    async def read_property(self, td, name, timeout: float = None):
+    async def read_property(self, td, name: str, timeout: float = None):
         """Reads the value of a Property on a remote Thing.
         Returns a Future."""
 
