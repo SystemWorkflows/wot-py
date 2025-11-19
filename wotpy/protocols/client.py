@@ -30,7 +30,7 @@ class BaseProtocolClient(object):
         raise NotImplementedError()
 
     @abstractmethod
-    def invoke_action(self, td, name, input_value, timeout=None):
+    def invoke_action(self, td, name: str, input_value, timeout: float|None = None):
         """Invokes an Action on a remote Thing.
         Returns a Future."""
 

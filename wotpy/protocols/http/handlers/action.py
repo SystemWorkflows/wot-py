@@ -21,22 +21,30 @@ class ActionInvokeHandler(RequestHandler):
     def initialize(self, http_server):
         self._server = http_server
 
-    async def post(self, thing_name, name):
+    async def post(self, thing_name: str, name: str):
         """Invokes the action and returns the invocation result."""
 
         exposed_thing = handler_utils.get_exposed_thing(self._server, thing_name)
-        #input_value = handler_utils.get_argument(self, "input")
-        input_value = self.request.body# rework this properly
-        result = await exposed_thing.actions[name].invoke(input_value)
-        #invocation_id = uuid.uuid4().hex
-        #self._server.pending_actions[invocation_id] = future_result
-        #self.write({"invocation": "/invocation/{}".format(invocation_id)})
-        if type(result) == int or type(result) == float or type(result) == bool:
-            result = str(result)
-        if type(result) == str:
-            result = "\"" + result + "\""
-        print("value: ", result)
-        self.write(result)
+
+        sync = exposed_thing.thing.actions[name].synchronous
+        print(sync)
+        if sync:  # synchronous
+            input_value = self.request.body  # rework this properly
+            result = await exposed_thing.actions[name].invoke(input_value)
+            if type(result) == int or type(result) == float or type(result) == bool:
+                result = str(result)
+            if type(result) == str:
+                result = "\"" + result + "\""
+            self.write(result)
+
+        else: # asynchronous
+            input_value = handler_utils.get_argument(self, "input")
+            input_value = self.request.body# rework this properly
+            future_result = await exposed_thing.actions[name].invoke(input_value)
+            invocation_id = uuid.uuid4().hex
+            self._server.pending_actions[invocation_id] = future_result
+            self.write({"invocation": "/invocation/{}".format(invocation_id)})
+
 
 class PendingInvocationHandler(RequestHandler):
     """Handler to check the status of pending action invocations."""

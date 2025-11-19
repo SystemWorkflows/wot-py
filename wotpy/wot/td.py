@@ -25,12 +25,12 @@ class ThingDescription(object):
 
         self._doc:dict = json.loads(doc) if isinstance(doc, (str, bytes)) else doc
         if("@type" in self._doc):
-            if (self._doc["@type"] == "tm:ThingModel"):
+            if self._doc["@type"] == "tm:ThingModel":
                 self._doc["@type"] = "Thing"
             elif self._doc["@type"] is list:
                 self._doc["@type"] = list(map(lambda x: "Thing" if x == "tm:ThingModel" else x, self._doc["@type"]))
         else:
-            self._doc["@type"] == "Thing"
+            self._doc["@type"] = "Thing"
         
 
         self._thing_fragment = ThingFragment(self._doc)

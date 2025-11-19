@@ -135,6 +135,7 @@ SCHEMA_ACTION = {
                 "output": SCHEMA_DATA_SCHEMA,
                 "safe": {"type": "boolean", "default": False},
                 "idempotent": {"type": "boolean", "default": False},
+                "synchronous": {"type": "boolean", "default": True},
             },
         },
     ],

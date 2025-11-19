@@ -12,7 +12,7 @@ from tornado.web import HTTPError
 APPLICATION_JSON = "application/json"
 
 
-def get_exposed_thing(server, thing_name):
+def get_exposed_thing(server, thing_name: str):
     """Utility function to retrieve an ExposedThing
     from the HTTPServer or raise an HTTPError."""
 

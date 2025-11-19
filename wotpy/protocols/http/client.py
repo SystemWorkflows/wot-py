@@ -44,7 +44,7 @@ class HTTPClient(BaseProtocolClient):
         super(HTTPClient, self).__init__()
 
     @classmethod
-    def pick_http_href(cls, td, forms, op=None):
+    def pick_http_href(cls, td, forms, op=None) -> str:
         """Picks the most appropriate HTTP form href from the given list of forms."""
 
         def is_op_form(form):
@@ -98,7 +98,7 @@ class HTTPClient(BaseProtocolClient):
 
         return len(forms_http) > 0
 
-    async def invoke_action(self, td, name, input_value, timeout=None):
+    async def invoke_action(self, td, name:str, input_value:str|int|float|dict, timeout:float=None):
         """Invokes an Action on a remote Thing.
         Returns a Future."""
 
@@ -111,8 +111,10 @@ class HTTPClient(BaseProtocolClient):
 
         if href is None:
             raise FormNotFoundException()
-
-        body = json.dumps({"input": input_value})
+        if type(input_value) in [int, float, bool]:
+            body = input_value
+        else:
+            body = json.dumps(input_value)
         http_client = tornado.httpclient.AsyncHTTPClient()
 
         try:
@@ -127,10 +129,12 @@ class HTTPClient(BaseProtocolClient):
         except HTTPTimeoutError as ex:
             raise ClientRequestTimeout from ex
 
-        response = await http_client.fetch(http_request)
-        invocation_url = json.loads(response.body).get("invocation")
+        # response = await http_client.fetch(http_request)
+        # return json.loads(response.body)
+    
+        
 
-        async def check_invocation():
+        async def check_invocation(invocation_url: str):
             parsed = parse.urlparse(href)
 
             invoc_href = "{}://{}/{}".format(
@@ -164,17 +168,25 @@ class HTTPClient(BaseProtocolClient):
             else:
                 return (True, status.get("result"))
 
-        while True:
-            done, result = await check_invocation()
 
-            if done and isinstance(result, Exception):
-                raise result
-            elif done:
-                return result
-            elif timeout and (time.time() - now) > timeout:
-                raise ClientRequestTimeout
 
-    async def write_property(self, td, name, value, timeout=None):
+        sync = td.to_dict().get("actions", {}).get(name, {}).get("synchronous", True)
+        if sync:
+            response = await http_client.fetch(http_request)
+            return json.loads(response.body)
+        else:
+            invocation_url = json.loads(response.body).get("invocation")
+            while True:
+                done, result = await check_invocation(invocation_url=invocation_url)
+
+                if done and isinstance(result, Exception):
+                    raise result
+                elif done:
+                    return result
+                elif timeout and (time.time() - now) > timeout:
+                    raise ClientRequestTimeout
+
+    async def write_property(self, td, name: str, value, timeout: float = None):
         """Updates the value of a Property on a remote Thing.
         Returns a Future."""
 
@@ -187,7 +199,14 @@ class HTTPClient(BaseProtocolClient):
             raise FormNotFoundException()
 
         http_client = tornado.httpclient.AsyncHTTPClient()
-        body = json.dumps({"value": value})
+        print(type(value))
+        body = ""
+        if type(value) in [int, float, bool]:
+            body = str(value)
+        elif type(value) is dict:
+            body = json.dumps(value)
+        else:
+            body = value
 
         try:
             http_request = tornado.httpclient.HTTPRequest(
@@ -203,7 +222,7 @@ class HTTPClient(BaseProtocolClient):
 
         await http_client.fetch(http_request)
 
-    async def read_property(self, td, name, timeout=None):
+    async def read_property(self, td, name, timeout: float = None):
         """Reads the value of a Property on a remote Thing.
         Returns a Future."""
 
@@ -229,7 +248,7 @@ class HTTPClient(BaseProtocolClient):
 
         response = await http_client.fetch(http_request)
         result = json.loads(response.body)
-        result = result.get("value", result)
+        #result = result.get("value", result)
 
         return result
 
@@ -255,7 +274,7 @@ class HTTPClient(BaseProtocolClient):
                 while state["active"]:
                     try:
                         response = await http_client.fetch(http_request)
-                        payload = json.loads(response.body).get("payload")
+                        payload = json.loads(response.body)#.get("payload")
                         observer.on_next(EmittedEvent(init=payload, name=name))
                     except HTTPTimeoutError:
                         pass

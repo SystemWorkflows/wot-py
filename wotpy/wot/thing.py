@@ -34,13 +34,13 @@ class Thing(object):
 
     assert THING_FRAGMENT_WRITABLE_FIELDS.issubset(ThingFragment.Meta.fields)
 
-    def __init__(self, thing_fragment: ThingFragment|None = None, **kwargs):
-        self._thing_fragment = (
+    def __init__(self, thing_fragment: ThingFragment | None = None, **kwargs):
+        self._thing_fragment: ThingFragment = (
             thing_fragment if thing_fragment else ThingFragment(**kwargs)
         )
-        self._properties = {}
-        self._actions = {}
-        self._events = {}
+        self._properties: dict[str, Property] = {}
+        self._actions: dict[str, Action] = {}
+        self._events: dict[str, Event] = {}
         self._init_fragment_interactions()
 
     def __getattr__(self, name):
@@ -184,7 +184,7 @@ class Thing(object):
 
         return next((intrct for intrct in self.interactions if is_match(intrct)), None)
 
-    def add_interaction(self, interaction):
+    def add_interaction(self, interaction: Property | Event | Action):
         """Add a new Interaction."""
 
         if not isinstance(interaction, (Property, Event, Action)):
