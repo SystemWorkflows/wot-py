@@ -7,8 +7,9 @@ Classes that represent Things exposed by a servient.
 
 import asyncio
 import concurrent.futures
-from asyncio import Future
 import json
+from asyncio import Future
+from typing import Any, Callable, Dict, Optional, TYPE_CHECKING
 
 from rx import Observable
 from rx.concurrency import IOLoopScheduler
@@ -40,6 +41,11 @@ from wotpy.wot.interaction import Action, Event, Property
 from wotpy.wot.td import ThingDescription
 from wotpy.wot.thing import Thing
 
+if TYPE_CHECKING:
+    from rx.core import Disposable
+    from wotpy.wot.interaction import InteractionPattern
+    from wotpy.wot.servient import Servient
+
 
 class ExposedThing(object):
     """An entity that serves to define the behavior of a Thing.
@@ -58,19 +64,19 @@ class ExposedThing(object):
 
         PROPERTY_VALUES = "property_values"
 
-    def __init__(self, servient, thing: Thing):
+    def __init__(self, servient: Servient, thing: Thing):
         self._servient = servient
         self._thing = thing
 
         self._interaction_states = {self.InteractionStateKeys.PROPERTY_VALUES: {}}
 
-        self._handlers_global = {
+        self._handlers_global: Dict[str, Callable] = {
             self.HandlerKeys.RETRIEVE_PROPERTY: self._default_retrieve_property_handler,
             self.HandlerKeys.UPDATE_PROPERTY: self._default_update_property_handler,
             self.HandlerKeys.INVOKE_ACTION: self._default_invoke_action_handler,
         }
 
-        self._handlers = {
+        self._handlers: Dict[str, Dict[InteractionPattern, Callable]] = {
             self.HandlerKeys.RETRIEVE_PROPERTY: {},
             self.HandlerKeys.UPDATE_PROPERTY: {},
             self.HandlerKeys.INVOKE_ACTION: {},
@@ -78,22 +84,24 @@ class ExposedThing(object):
 
         self._events_stream = Subject()
 
-    def __str__(self):
+    def __str__(self) -> str:
         return "<{}> {}".format(self.__class__.__name__, self.id)
 
-    def __eq__(self, other):
-        return self.servient == other.servient and self.thing == other.thing
+    def __eq__(self, other: object) -> bool:
+        if isinstance(other, ExposedThing):
+            return self.servient == other.servient and self.thing == other.thing
+        return False
 
-    def __hash__(self):
+    def __hash__(self) -> int:
         return hash((self.servient, self.thing))
 
-    def __getattr__(self, name):
+    def __getattr__(self, name: str) -> Any:
         """Search for members that raised an AttributeError in
         the private Thing instance before propagating the exception."""
 
         return getattr(self.thing, name)
 
-    def __setattr__(self, name, value):
+    def __setattr__(self, name: str, value: Any) -> None:
         """Setter for ThingFragment attributes."""
 
         name_camel = to_camel(name)
@@ -103,19 +111,19 @@ class ExposedThing(object):
 
         return self._thing.__setattr__(name, value)
 
-    def _set_property_value(self, prop, value):
+    def _set_property_value(self, prop: Property, value: Any) -> None:
         """Sets a Property value."""
 
         prop_values = self.InteractionStateKeys.PROPERTY_VALUES
         self._interaction_states[prop_values][prop] = value
 
-    def _get_property_value(self, prop):
+    def _get_property_value(self, prop: Property) -> Any:
         """Returns a Property value."""
 
         prop_values = self.InteractionStateKeys.PROPERTY_VALUES
         return self._interaction_states[prop_values].get(prop, None)
 
-    def _set_handler(self, handler_type, handler, interaction=None):
+    def _set_handler(self, handler_type: str, handler: Callable, interaction: Optional[InteractionPattern] = None) -> None:
         """Sets the currently defined handler for the given handler type."""
 
         if interaction is None or handler_type not in self._handlers:
@@ -123,7 +131,7 @@ class ExposedThing(object):
         else:
             self._handlers[handler_type][interaction] = handler
 
-    def _get_handler(self, handler_type, interaction=None):
+    def _get_handler(self, handler_type: str, interaction: Optional[InteractionPattern] = None) -> Callable:
         """Returns the currently defined handler for the given handler type."""
 
         interaction_handler = self._handlers.get(handler_type, {}).get(
@@ -132,7 +140,7 @@ class ExposedThing(object):
 
         return interaction_handler or self._handlers_global[handler_type]
 
-    def _find_interaction(self, name):
+    def _find_interaction(self, name: str) -> InteractionPattern:
         """Raises ValueError if the given interaction does not exist in this Thing."""
 
         interaction = self._thing.find_interaction(name=name)
@@ -142,27 +150,27 @@ class ExposedThing(object):
 
         return interaction
 
-    def _default_retrieve_property_handler(self, property_name):
+    def _default_retrieve_property_handler(self, property_name: str) -> Future:
         """Default handler for property reads."""
 
         future_read = Future()
         prop = self._find_interaction(name=property_name)
-        prop_value = self._get_property_value(prop)
+        prop_value = self._get_property_value(prop) # type: ignore
         future_read.set_result(prop_value)
 
         return future_read
 
-    def _default_update_property_handler(self, property_name, value):
+    def _default_update_property_handler(self, property_name: str, value: Any) -> Future:
         """Default handler for onUpdateProperty."""
 
         future_write = Future()
         prop = self._find_interaction(name=property_name)
-        self._set_property_value(prop, value)
+        self._set_property_value(prop, value) # type: ignore
         future_write.set_result(None)
 
         return future_write
 
-    def _default_invoke_action_handler(self, parameters):
+    def _default_invoke_action_handler(self, parameters: Dict) -> Future:
         """Default handler for onInvokeAction."""
 
         future_invoke = Future()
@@ -171,42 +179,42 @@ class ExposedThing(object):
         return future_invoke
 
     @property
-    def id(self):
+    def id(self) -> str:
         """Returns the ID of the Thing."""
 
         return self.thing.id
 
     @property
-    def servient(self):
+    def servient(self) -> Servient:
         """Servient that contains this ExposedThing."""
 
         return self._servient
 
     @property
-    def thing(self):
+    def thing(self) -> Thing:
         """Returns the object that represents the Thing beneath this ExposedThing."""
 
         return self._thing
 
     @property
-    def properties(self):
+    def properties(self) -> ExposedThingPropertyDict:
         """Returns a dictionary of ThingProperty items."""
 
         return ExposedThingPropertyDict(exposed_thing=self)
 
     @property
-    def actions(self):
+    def actions(self) -> ExposedThingActionDict:
         """Returns a dictionary of ThingAction items."""
 
         return ExposedThingActionDict(exposed_thing=self)
 
     @property
-    def events(self):
+    def events(self) -> ExposedThingEventDict:
         """Returns a dictionary of ThingEvent items."""
 
         return ExposedThingEventDict(exposed_thing=self)
 
-    async def read_property(self, name):
+    async def read_property(self, name: str) -> Any:
         """Takes the Property name as the name argument, then requests from
         the underlying platform and the Protocol Bindings to retrieve the
         Property on the remote Thing and return the result. Returns a Future
@@ -225,7 +233,7 @@ class ExposedThing(object):
         print("Read property '{}' with value: {}".format(name, value))
         return value
 
-    async def write_property(self, name, value):
+    async def write_property(self, name: str, value: Any) -> None:
         """Takes the Property name as the name argument and the new value as the
         value argument, then requests from the underlying platform and the Protocol
         Bindings to update the Property on the remote Thing and return the result.
@@ -253,7 +261,7 @@ class ExposedThing(object):
         event_init = PropertyChangeEventInit(name=name, value=value)
         self._events_stream.on_next(PropertyChangeEmittedEvent(init=event_init))
 
-    async def invoke_action(self, name, input_value=None):
+    async def invoke_action(self, name: str, input_value: Any = None) -> Any:
         """Invokes an Action with the given parameters and yields with the invocation result."""
 
         action = self.thing.actions[name]
@@ -275,7 +283,7 @@ class ExposedThing(object):
 
         return result
 
-    def on_event(self, name):
+    def on_event(self, name: str) -> Observable:
         """Returns an Observable for the Event specified in the name argument,
         allowing subscribing to and unsubscribing from notifications."""
 
@@ -287,7 +295,7 @@ class ExposedThing(object):
 
         return self._events_stream.filter(event_filter)
 
-    def on_property_change(self, name):
+    def on_property_change(self, name: str) -> Observable:
         """Returns an Observable for the Property specified in the name argument,
         allowing subscribing to and unsubscribing from notifications."""
 
@@ -307,7 +315,7 @@ class ExposedThing(object):
 
         return self._events_stream.filter(property_change_filter)
 
-    def on_td_change(self):
+    def on_td_change(self) -> Observable:
         """Returns an Observable, allowing subscribing to and unsubscribing
         from notifications to the Thing Description."""
 
@@ -316,19 +324,19 @@ class ExposedThing(object):
 
         return self._events_stream.filter(td_change_filter)
 
-    def expose(self):
+    def expose(self) -> None:
         """Start serving external requests for the Thing, so that
         WoT interactions using Properties, Actions and Events will be possible."""
 
         self._servient.enable_exposed_thing(self.thing.id)
 
-    def destroy(self):
+    def destroy(self) -> None:
         """Stop serving external requests for the Thing and destroy the object.
         Note that eventual unregistering should be done before invoking this method."""
 
         self._servient.remove_exposed_thing(self.thing.id)
 
-    def emit_event(self, event_name, payload):
+    def emit_event(self, event_name: str, payload: Any) -> None:
         """Emits an the event initialized with the event name specified by
         the event_name argument and data specified by the payload argument."""
 
@@ -337,7 +345,7 @@ class ExposedThing(object):
 
         self._events_stream.on_next(EmittedEvent(name=event_name, init=payload))
 
-    def add_property(self, name, property_init, value=None):
+    def add_property(self, name: str, property_init: Dict | PropertyFragmentDict, value: Any = None) -> None:
         """Adds a Property defined by the argument and updates the Thing Description.
         Takes an instance of ThingPropertyInit as argument."""
 
@@ -359,7 +367,7 @@ class ExposedThing(object):
 
         self._events_stream.on_next(ThingDescriptionChangeEmittedEvent(init=event_data))
 
-    def remove_property(self, name):
+    def remove_property(self, name: str) -> None:
         """Removes the Property specified by the name argument,
         updates the Thing Description and returns the object."""
 
@@ -373,7 +381,7 @@ class ExposedThing(object):
 
         self._events_stream.on_next(ThingDescriptionChangeEmittedEvent(init=event_data))
 
-    def add_action(self, name, action_init, action_handler=None):
+    def add_action(self, name: str, action_init: Dict | ActionFragmentDict, action_handler: Optional[Callable] = None) -> None:
         """Adds an Action to the Thing object as defined by the action
         argument of type ThingActionInit and updates the Thing Description."""
 
@@ -397,7 +405,7 @@ class ExposedThing(object):
         if action_handler:
             self.set_action_handler(name, action_handler)
 
-    def remove_action(self, name):
+    def remove_action(self, name: str) -> None:
         """Removes the Action specified by the name argument,
         updates the Thing Description and returns the object."""
 
@@ -409,7 +417,7 @@ class ExposedThing(object):
 
         self._events_stream.on_next(ThingDescriptionChangeEmittedEvent(init=event_data))
 
-    def add_event(self, name, event_init):
+    def add_event(self, name: str, event_init: Dict | EventFragmentDict) -> None:
         """Adds an event to the Thing object as defined by the event argument
         of type ThingEventInit and updates the Thing Description."""
 
@@ -430,7 +438,7 @@ class ExposedThing(object):
 
         self._events_stream.on_next(ThingDescriptionChangeEmittedEvent(init=event_data))
 
-    def remove_event(self, name):
+    def remove_event(self, name: str) -> None:
         """Removes the event specified by the name argument,
         updates the Thing Description and returns the object."""
 
@@ -442,7 +450,7 @@ class ExposedThing(object):
 
         self._events_stream.on_next(ThingDescriptionChangeEmittedEvent(init=event_data))
 
-    def set_action_handler(self, name: str, action_handler):
+    def set_action_handler(self, name: str, action_handler: Callable) -> ExposedThing:
         """Takes name as string argument and action_handler as argument of type ActionHandler.
         Sets the handler function for the specified Action matched by name.
         Throws on error. Returns a reference to the same object for supporting chaining.
@@ -458,7 +466,7 @@ class ExposedThing(object):
 
         return self
 
-    def set_property_read_handler(self, name, read_handler):
+    def set_property_read_handler(self, name: str, read_handler: Callable) -> ExposedThing:
         """Takes name as string argument and read_handler as argument of type PropertyReadHandler.
         Sets the handler function for reading the specified Property matched by name.
         Throws on error. Returns a reference to the same object for supporting chaining.
@@ -474,7 +482,7 @@ class ExposedThing(object):
 
         return self
 
-    def set_property_write_handler(self, name, write_handler):
+    def set_property_write_handler(self, name: str, write_handler: Callable) -> ExposedThing:
         """Takes name as string argument and write_handler as argument of type PropertyWriteHandler.
         Sets the handler function for writing the specified Property matched by name.
         Throws on error. Returns a reference to the same object for supporting chaining.
@@ -490,7 +498,7 @@ class ExposedThing(object):
 
         return self
 
-    def subscribe(self, *args, **kwargs):
+    def subscribe(self, *args, **kwargs) -> Disposable:
         """Subscribes to changes on the TD of this thing."""
 
         observable = self.on_td_change()
