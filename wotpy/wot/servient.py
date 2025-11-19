@@ -9,6 +9,7 @@ import asyncio
 import functools
 import re
 import socket
+from typing import Any, Dict, Iterator, List, Optional, Set, TYPE_CHECKING
 
 import tornado.web
 
@@ -22,14 +23,19 @@ from wotpy.wot.exposed.thing_set import ExposedThingSet
 from wotpy.wot.td import ThingDescription
 from wotpy.wot.wot import WoT
 
+if TYPE_CHECKING:
+    from wotpy.protocols.client import BaseProtocolClient
+    from wotpy.protocols.server import BaseProtocolServer
+    from wotpy.wot.exposed.thing import ExposedThing
+
 
 class TDHandler(tornado.web.RequestHandler):
     """Handler that returns the TD document of a given Thing."""
 
-    def initialize(self, servient):
+    def initialize(self, servient: Servient) -> None:
         self.servient = servient
 
-    def get(self, thing_url_name):
+    def get(self, thing_url_name: str) -> None:
         exp_thing = self.servient.exposed_thing_set.find_by_thing_id(thing_url_name)
 
         td_doc = ThingDescription.from_thing(exp_thing.thing).to_dict()
@@ -45,10 +51,10 @@ class TDCatalogueHandler(tornado.web.RequestHandler):
     """Handler that returns the entire catalogue of Things contained in this servient.
     May return TDs in expanded format or URL pointers to the individual TDs."""
 
-    def initialize(self, servient):
+    def initialize(self, servient: Servient) -> None:
         self.servient = servient
 
-    def get(self):
+    def get(self) -> None:
         response = {}
 
         for exp_thing in self.servient.enabled_exposed_things:
@@ -115,12 +121,12 @@ class Servient(object):
 
     def __init__(
         self,
-        hostname=None,
-        catalogue_port=9090,
-        clients=None,
-        clients_config=None,
-        dnssd_enabled=False,
-        dnssd_instance_name=None,
+        hostname: str | None = None,
+        catalogue_port: int | None = 9090,
+        clients: List[BaseProtocolClient] | None = None,
+        clients_config: Dict[str, Any] | None = None,
+        dnssd_enabled: bool = False,
+        dnssd_instance_name: str | None = None,
     ):
         self._hostname = hostname if hostname is not None else _get_hostname_fallback()
 
@@ -128,13 +134,15 @@ class Servient(object):
             raise ValueError("Invalid hostname: {}".format(self._hostname))
 
         if isinstance(clients, list):
-            clients = {item.protocol: item for item in clients}
+            clients_dict = {item.protocol: item for item in clients}
+        else:
+            clients_dict = {}
 
-        self._servers = {}
-        self._clients = clients if clients else {}
+        self._servers: Dict[str, BaseProtocolServer] = {}
+        self._clients: Dict[str, BaseProtocolClient] = clients_dict if clients else {}
         self._clients_config = clients_config
         self._catalogue_port = catalogue_port
-        self._catalogue_server = None
+        self._catalogue_server: Optional[tornado.httpserver.HTTPServer] = None
         self._exposed_thing_set = ExposedThingSet()
         self._servient_lock = asyncio.Lock()
         self._is_running = False
@@ -145,13 +153,13 @@ class Servient(object):
 
         self._dnssd_instance_name = dnssd_instance_name
         self._dnssd = None
-        self._enabled_exposed_thing_ids = set()
+        self._enabled_exposed_thing_ids: Set[str] = set()
 
         if not len(self._clients):
             self._build_default_clients()
 
     @staticmethod
-    def _default_select_client(clients, td, name):
+    def _default_select_client(clients: Iterator[BaseProtocolClient], td: ThingDescription, name: str) -> BaseProtocolClient:
         """Default implementation of the function to select
         a Protocol Binding client for an Interaction."""
 
@@ -206,33 +214,33 @@ class Servient(object):
         return next(client for client in clients if client.protocol == protocol)
 
     @property
-    def is_running(self):
+    def is_running(self) -> bool:
         """Returns True if the Servient is currently running
         (i.e. the attached servers have been started)."""
 
         return self._is_running
 
     @property
-    def hostname(self):
+    def hostname(self) -> str:
         """Hostname attached to this servient."""
 
         return self._hostname
 
     @property
-    def exposed_thing_set(self):
+    def exposed_thing_set(self) -> ExposedThingSet:
         """Returns the ExposedThingSet instance that
         contains the ExposedThings of this servient."""
 
         return self._exposed_thing_set
 
     @property
-    def exposed_things(self):
+    def exposed_things(self) -> Iterator[ExposedThing]:
         """Returns an iterator for the ExposedThings contained in this Servient."""
 
         return self.exposed_thing_set.exposed_things
 
     @property
-    def enabled_exposed_things(self):
+    def enabled_exposed_things(self) -> Iterator[ExposedThing]:
         """Returns an iterator for the enabled ExposedThings contained in this Servient."""
 
         for exposed_thing in self.exposed_things:
@@ -240,43 +248,43 @@ class Servient(object):
                 yield exposed_thing
 
     @property
-    def servers(self):
+    def servers(self) -> Dict[str, BaseProtocolServer]:
         """Returns the dict of Protocol Binding servers attached to this servient."""
 
         return self._servers
 
     @property
-    def clients(self):
+    def clients(self) -> Dict[str, BaseProtocolClient]:
         """Returns the dict of Protocol Binding clients attached to this servient."""
 
         return self._clients
 
     @property
-    def catalogue_port(self):
+    def catalogue_port(self) -> int | None:
         """Returns the current port of the HTTP Thing Description catalogue service."""
 
         return self._catalogue_port
 
     @catalogue_port.setter
     @_stopped_servient_only
-    def catalogue_port(self, port):
+    def catalogue_port(self, port: int | None) -> None:
         """Enables the servient TD catalogue in the given port."""
 
         self._catalogue_port = port
 
     @property
-    def dnssd(self):
+    def dnssd(self) -> Any:
         """Returns the DNS-SD instance linked to this Servient (if enabled and started)."""
 
         return self._dnssd
 
     @property
-    def dnssd_instance_name(self):
+    def dnssd_instance_name(self) -> str | None:
         """Returns the user-given DNS-SD service instance name."""
 
         return self._dnssd_instance_name
 
-    async def _start_dnssd(self):
+    async def _start_dnssd(self) -> None:
         """Starts the DNS-SD service and registers the servient."""
 
         if self._dnssd or not self._dnssd_enabled:
@@ -289,7 +297,7 @@ class Servient(object):
         await self._dnssd.start()
         await self._dnssd.register(self, instance_name=self._dnssd_instance_name)
 
-    async def _stop_dnssd(self):
+    async def _stop_dnssd(self) -> None:
         """Unregisters the servient and stops the DNS-SD service."""
 
         if not self._dnssd:
@@ -298,7 +306,7 @@ class Servient(object):
         await self._dnssd.stop()
         self._dnssd = None
 
-    def _build_default_clients(self):
+    def _build_default_clients(self) -> None:
         """Builds the default Protocol Binding clients."""
 
         self._clients = self._clients if self._clients else {}
@@ -328,7 +336,7 @@ class Servient(object):
                 {Protocols.MQTT: MQTTClient(**conf.get(Protocols.MQTT, {}))}
             )
 
-    def _build_td_catalogue_app(self):
+    def _build_td_catalogue_app(self) -> tornado.web.Application:
         """Returns a Tornado app that provides one endpoint to retrieve the
         entire catalogue of thing descriptions contained in this servient."""
 
@@ -339,7 +347,7 @@ class Servient(object):
             ]
         )
 
-    def _start_catalogue(self):
+    def _start_catalogue(self) -> None:
         """Starts the TD catalogue server if enabled."""
 
         if self._catalogue_server or not self._catalogue_port:
@@ -348,7 +356,7 @@ class Servient(object):
         catalogue_app = self._build_td_catalogue_app()
         self._catalogue_server = catalogue_app.listen(self._catalogue_port)
 
-    def _stop_catalogue(self):
+    def _stop_catalogue(self) -> None:
         """Stops the TD catalogue server if running."""
 
         if not self._catalogue_server:
@@ -357,14 +365,14 @@ class Servient(object):
         self._catalogue_server.stop()
         self._catalogue_server = None
 
-    def _clean_forms(self):
+    def _clean_forms(self) -> None:
         """Cleans all the Forms from all the ExposedThings contained in this Servient."""
 
         for exposed_thing in self._exposed_thing_set.exposed_things:
             for interaction in exposed_thing.thing.interactions:
                 interaction.clean_forms()
 
-    def _clean_protocol_forms(self, exposed_thing, protocol):
+    def _clean_protocol_forms(self, exposed_thing: ExposedThing, protocol: str) -> None:
         """Removes all interaction forms linked to this
         server protocol for the given ExposedThing."""
 
@@ -382,7 +390,7 @@ class Servient(object):
             for form in forms_to_remove:
                 interaction.remove_form(form)
 
-    def _server_has_exposed_thing(self, server, exposed_thing):
+    def _server_has_exposed_thing(self, server: BaseProtocolServer, exposed_thing: "ExposedThing") -> bool:
         """Returns True if the given server contains the ExposedThing."""
 
         if server not in self._servers.values():
@@ -393,7 +401,7 @@ class Servient(object):
 
         return server.exposed_thing_set.contains(exposed_thing)
 
-    def _add_interaction_forms(self, server, exposed_thing):
+    def _add_interaction_forms(self, server: BaseProtocolServer, exposed_thing: "ExposedThing") -> None:
         """Builds and adds to the ExposedThing the Links related to the given server."""
 
         if server not in self._servers.values():
@@ -408,7 +416,7 @@ class Servient(object):
             for form in forms:
                 interaction.add_form(form)
 
-    def _regenerate_server_forms(self, server):
+    def _regenerate_server_forms(self, server: BaseProtocolServer) -> None:
         """Cleans and regenerates Forms for the given server in all ExposedThings."""
 
         if server not in self._servers.values():
@@ -419,7 +427,7 @@ class Servient(object):
             if self._server_has_exposed_thing(server, exp_thing):
                 self._add_interaction_forms(server, exp_thing)
 
-    def get_thing_base_url(self, exposed_thing):
+    def get_thing_base_url(self, exposed_thing: ExposedThing) -> str | None:
         """Return the base URL for the given ExposedThing
         for one of the currently active servers."""
 
@@ -442,37 +450,37 @@ class Servient(object):
 
         return server.build_base_url(hostname=self.hostname, thing=exposed_thing.thing)
 
-    def select_client(self, td, name):
+    def select_client(self, td: ThingDescription, name: str) -> BaseProtocolClient:
         """Returns the Protocol Binding client instance to
         communicate with the given Interaction."""
 
         return Servient._default_select_client(self.clients.values(), td, name)
 
     @_stopped_servient_only
-    def add_client(self, client):
+    def add_client(self, client: BaseProtocolClient) -> None:
         """Adds a new Protocol Binding client to this servient."""
 
         self._clients[client.protocol] = client
 
     @_stopped_servient_only
-    def remove_client(self, protocol):
+    def remove_client(self, protocol: str) -> None:
         """Removes the Protocol Binding client with the given protocol from this servient."""
 
         self._clients.pop(protocol, None)
 
     @_stopped_servient_only
-    def add_server(self, server):
+    def add_server(self, server: BaseProtocolServer) -> None:
         """Adds a new Protocol Binding server to this servient."""
 
         self._servers[server.protocol] = server
 
     @_stopped_servient_only
-    def remove_server(self, protocol):
+    def remove_server(self, protocol: str) -> None:
         """Removes the Protocol Binding server with the given protocol from this servient."""
 
         self._servers.pop(protocol, None)
 
-    def refresh_forms(self):
+    def refresh_forms(self) -> None:
         """Cleans and regenerates Forms for all the
         ExposedThings and servers contained in this servient."""
 
@@ -481,7 +489,7 @@ class Servient(object):
         for server in self._servers.values():
             self._regenerate_server_forms(server)
 
-    def enable_exposed_thing(self, thing_id):
+    def enable_exposed_thing(self, thing_id: str) -> None:
         """Enables the ExposedThing with the given ID.
         This is, the servers will listen for requests for this thing."""
 
@@ -493,7 +501,7 @@ class Servient(object):
 
         self._enabled_exposed_thing_ids.add(exposed_thing.id)
 
-    def disable_exposed_thing(self, thing_id):
+    def disable_exposed_thing(self, thing_id: str) -> None:
         """Disables the ExposedThing with the given ID.
         This is, the servers will not listen for requests for this thing."""
 
@@ -508,13 +516,13 @@ class Servient(object):
 
         self._enabled_exposed_thing_ids.remove(exposed_thing.id)
 
-    def add_exposed_thing(self, exposed_thing):
+    def add_exposed_thing(self, exposed_thing: ExposedThing) -> None:
         """Adds an ExposedThing to this Servient.
         ExposedThings are disabled by default."""
 
         self._exposed_thing_set.add(exposed_thing)
 
-    def remove_exposed_thing(self, thing_id):
+    def remove_exposed_thing(self, thing_id: str) -> None:
         """Disables and removes an ExposedThing from this Servient."""
 
         if thing_id in self._enabled_exposed_thing_ids:
@@ -522,7 +530,7 @@ class Servient(object):
 
         self._exposed_thing_set.remove(thing_id)
 
-    def get_exposed_thing(self, thing_id):
+    def get_exposed_thing(self, thing_id: str) -> ExposedThing:
         """Finds and returns an ExposedThing contained in this servient by Thing ID.
         Raises ValueError if the ExposedThing is not present."""
 
@@ -534,12 +542,12 @@ class Servient(object):
         return exp_thing
 
     @_stopped_servient_only
-    def disable_td_catalogue(self):
+    def disable_td_catalogue(self) -> None:
         """Disables the servient TD catalogue."""
 
         self._catalogue_port = None
 
-    async def start(self):
+    async def start(self) -> WoT:
         """Starts the servers and returns an instance of the WoT object."""
 
         async with self._servient_lock:
@@ -551,7 +559,7 @@ class Servient(object):
 
             return WoT(servient=self)
 
-    async def shutdown(self):
+    async def shutdown(self) -> None:
         """Stops the server configured under this servient."""
 
         async with self._servient_lock:

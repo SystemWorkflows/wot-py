@@ -8,6 +8,7 @@ Class that represents a Thing.
 import hashlib
 import itertools
 import uuid
+from typing import Any, Iterator
 
 from slugify import slugify
 
@@ -43,13 +44,13 @@ class Thing(object):
         self._events: dict[str, Event] = {}
         self._init_fragment_interactions()
 
-    def __getattr__(self, name):
+    def __getattr__(self, name: str) -> Any:
         """Search for members that raised an AttributeError in
         the private ThingFragment before propagating the exception."""
 
         return getattr(self._thing_fragment, name)
 
-    def __setattr__(self, name, value):
+    def __setattr__(self, name: str, value: Any) -> None:
         """Setter for ThingFragment attributes."""
 
         name_camel = to_camel(name)
@@ -59,7 +60,7 @@ class Thing(object):
 
         return self._thing_fragment.__setattr__(name, value)
 
-    def _init_fragment_interactions(self):
+    def _init_fragment_interactions(self) -> None:
         """Adds the interactions declared in the ThingFragment to the instance private dicts."""
 
         for name, prop_fragment in self._thing_fragment.properties.items():
@@ -75,7 +76,7 @@ class Thing(object):
             self.add_interaction(event)
 
     @property
-    def thing_fragment(self):
+    def thing_fragment(self) -> ThingFragment:
         """The ThingFragment dictionary of this Thing."""
 
         def interaction_to_json(intrct):
@@ -117,19 +118,19 @@ class Thing(object):
         return ThingFragment(doc)
 
     @property
-    def id(self):
+    def id(self) -> str:
         """Thing ID."""
 
         return self.thing_fragment.id
 
     @property
-    def title(self):
+    def title(self) -> str:
         """Thing title."""
 
         return self.thing_fragment.title
 
     @property
-    def uuid(self):
+    def uuid(self) -> str:
         """Thing UUID in hex string format (e.g. a5220c5f-6bcb-4675-9c67-a2b1adc280b7).
         This value is deterministic and derived from the Thing ID.
         It may be of use when URL-unsafe chars are not acceptable."""
@@ -142,7 +143,7 @@ class Thing(object):
         return str(uuid.UUID(bytes=bytes_id_hash))
 
     @property
-    def url_name(self):
+    def url_name(self) -> str:
         """Returns the URL-safe name of this Thing.
         The URL name of a Thing is always unique and stable as long as the ID is unique.
         """
@@ -150,32 +151,32 @@ class Thing(object):
         return slugify("{}-{}".format(self.title, self.uuid))
 
     @property
-    def properties(self):
+    def properties(self) -> dict[str, Property]:
         """Properties interactions."""
 
         return self._properties
 
     @property
-    def actions(self):
+    def actions(self) -> dict[str, Action]:
         """Actions interactions."""
 
         return self._actions
 
     @property
-    def events(self):
+    def events(self) -> dict[str, Event]:
         """Events interactions."""
 
         return self._events
 
     @property
-    def interactions(self):
+    def interactions(self) -> Iterator[Property | Action | Event]:
         """Sequence of interactions linked to this thing."""
 
         return itertools.chain(
             self._properties.values(), self._actions.values(), self._events.values()
         )
 
-    def find_interaction(self, name):
+    def find_interaction(self, name: str) -> Property | Action | Event | None:
         """Finds an existing Interaction by name.
         The name argument may be the original name or the URL-safe version."""
 
@@ -184,7 +185,7 @@ class Thing(object):
 
         return next((intrct for intrct in self.interactions if is_match(intrct)), None)
 
-    def add_interaction(self, interaction: Property | Event | Action):
+    def add_interaction(self, interaction: Property | Event | Action) -> None:
         """Add a new Interaction."""
 
         if not isinstance(interaction, (Property, Event, Action)):
@@ -212,7 +213,7 @@ class Thing(object):
 
         interaction_dict_map[interaction_class][interaction.name] = interaction
 
-    def remove_interaction(self, name):
+    def remove_interaction(self, name: str) -> None:
         """Removes an existing Interaction by name.
         The name argument may be the original name or the URL-safe version."""
 

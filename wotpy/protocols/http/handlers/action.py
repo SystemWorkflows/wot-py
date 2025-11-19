@@ -5,6 +5,7 @@
 Request handler for Action interactions.
 """
 
+import json
 import logging
 import pprint
 import time
@@ -25,11 +26,10 @@ class ActionInvokeHandler(RequestHandler):
         """Invokes the action and returns the invocation result."""
 
         exposed_thing = handler_utils.get_exposed_thing(self._server, thing_name)
-
-        sync = exposed_thing.thing.actions[name].synchronous
+        sync = exposed_thing.actions[name].synchronous
         print(sync)
         if sync:  # synchronous
-            input_value = self.request.body  # rework this properly
+            input_value = json.loads(self.request.body)
             result = await exposed_thing.actions[name].invoke(input_value)
             if type(result) == int or type(result) == float or type(result) == bool:
                 result = str(result)
@@ -38,9 +38,8 @@ class ActionInvokeHandler(RequestHandler):
             self.write(result)
 
         else: # asynchronous
-            input_value = handler_utils.get_argument(self, "input")
-            input_value = self.request.body# rework this properly
-            future_result = await exposed_thing.actions[name].invoke(input_value)
+            input_value = json.loads(self.request.body)
+            future_result = exposed_thing.actions[name].invoke(input_value)
             invocation_id = uuid.uuid4().hex
             self._server.pending_actions[invocation_id] = future_result
             self.write({"invocation": "/invocation/{}".format(invocation_id)})

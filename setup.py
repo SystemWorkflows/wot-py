@@ -60,17 +60,13 @@ setup(
     author="Andres Garcia Mangas",
     author_email="andres.garcia@fundacionctic.org",
     url="https://github.com/SystemWorkflows/wot-py",
-    python_requires = ">=3.10",
+    python_requires = ">=3.14",
     classifiers=[
         "Development Status :: 4 - Beta",
         "Intended Audience :: Developers",
         "Natural Language :: English",
         "Operating System :: OS Independent",
         "License :: OSI Approved :: MIT License",
-        "Programming Language :: Python :: 3.10",
-        "Programming Language :: Python :: 3.11",
-        "Programming Language :: Python :: 3.12",
-        "Programming Language :: Python :: 3.13",
         "Programming Language :: Python :: 3.14"
     ],
     packages=find_packages(),

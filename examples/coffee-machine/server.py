@@ -228,15 +228,15 @@ _logger = logging.getLogger("coffee-machine")
 
 
 async def main():
-    _logger.info("Creating WebSocket server on: {}".format(WEBSOCKET_PORT))
-    ws_server = WebsocketServer(port=WEBSOCKET_PORT)
+   # _logger.info("Creating WebSocket server on: {}".format(WEBSOCKET_PORT))
+    #ws_server = WebsocketServer(port=WEBSOCKET_PORT)
 
     _logger.info("Creating HTTP server on: {}".format(HTTP_PORT))
     http_server = HTTPServer(port=HTTP_PORT)
 
     _logger.info("Creating servient with TD catalogue on: {}".format(CATALOGUE_PORT))
     servient = Servient(catalogue_port=CATALOGUE_PORT, hostname=HOSTNAME)
-    servient.add_server(ws_server)
+    #servient.add_server(ws_server)
     servient.add_server(http_server)
 
     _logger.info("Starting servient")
@@ -347,13 +347,14 @@ async def main():
         }
 
         # Check if params are provided
+        print(params)
         drinkId = params.get("drinkId", drinkId)
         size = params.get("size", size)
         quantity = params.get("quantity", quantity)
 
         # Read the current level of allAvailableResources
         resources = await exposed_thing.read_property("allAvailableResources")
-
+        print("Resources:", resources)
         # Calculate the new level of resources
         newResources = resources.copy()
 

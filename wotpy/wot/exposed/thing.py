@@ -8,6 +8,7 @@ Classes that represent Things exposed by a servient.
 import asyncio
 import concurrent.futures
 from asyncio import Future
+import json
 
 from rx import Observable
 from rx.concurrency import IOLoopScheduler
@@ -211,17 +212,17 @@ class ExposedThing(object):
         Property on the remote Thing and return the result. Returns a Future
         that resolves with the Property value or rejects with an Error."""
 
-        property = self.thing.properties[name]
+        proprty = self.thing.properties[name]
 
         handler = self._handlers.get(self.HandlerKeys.RETRIEVE_PROPERTY, {}).get(
-            property, None
+            proprty, None
         )
 
         if handler:
             value = await handler()
         else:
             value = await self._default_retrieve_property_handler(name)
-
+        print("Read property '{}' with value: {}".format(name, value))
         return value
 
     async def write_property(self, name, value):
@@ -230,13 +231,13 @@ class ExposedThing(object):
         Bindings to update the Property on the remote Thing and return the result.
         Returns a Future that resolves on success or rejects with an Error."""
 
-        property = self.thing.properties[name]
+        proprty = self.thing.properties[name]
 
-        if not property.writable:
+        if not proprty.writable:
             raise TypeError("Property is non-writable")
 
         handler = self._handlers.get(self.HandlerKeys.UPDATE_PROPERTY, {}).get(
-            property, None
+            proprty, None
         )
 
         if handler:
@@ -441,7 +442,7 @@ class ExposedThing(object):
 
         self._events_stream.on_next(ThingDescriptionChangeEmittedEvent(init=event_data))
 
-    def set_action_handler(self, name, action_handler):
+    def set_action_handler(self, name: str, action_handler):
         """Takes name as string argument and action_handler as argument of type ActionHandler.
         Sets the handler function for the specified Action matched by name.
         Throws on error. Returns a reference to the same object for supporting chaining.

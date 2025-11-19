@@ -9,6 +9,7 @@ import asyncio
 import json
 import logging
 import warnings
+from typing import Any, Dict, Optional, TYPE_CHECKING
 
 import tornado.gen
 from rx import Observable
@@ -17,11 +18,15 @@ from tornado.httpclient import AsyncHTTPClient, HTTPRequest
 from wotpy.support import is_dnssd_supported
 from wotpy.utils.utils import handle_observer_finalization
 from wotpy.wot.consumed.thing import ConsumedThing
+from wotpy.wot.dictionaries.filter import ThingFilterDict
 from wotpy.wot.dictionaries.thing import ThingFragment
 from wotpy.wot.enums import DiscoveryMethod
 from wotpy.wot.exposed.thing import ExposedThing
 from wotpy.wot.td import ThingDescription
 from wotpy.wot.thing import Thing
+
+if TYPE_CHECKING:
+    from wotpy.wot.servient import Servient
 
 DEFAULT_FETCH_TIMEOUT_SECS = 20.0
 
@@ -31,18 +36,18 @@ class WoT(object):
     implementation of the WoT Runtime. The WoT object does not expose
     properties, only methods for discovering, consuming and exposing a Thing."""
 
-    def __init__(self, servient):
+    def __init__(self, servient: Servient):
         self._servient = servient
         self._logr = logging.getLogger(__name__)
 
     @property
-    def servient(self):
+    def servient(self) -> Servient:
         """Servient instance of this WoT entrypoint."""
 
         return self._servient
 
     @classmethod
-    def _is_fragment_match(cls, item, thing_filter):
+    def _is_fragment_match(cls, item: ExposedThing | Thing | ThingDescription, thing_filter: ThingFilterDict) -> bool:
         """Returns True if the given item (an ExposedThing, Thing or TD)
         matches the fragment in the given Thing filter."""
 
@@ -62,7 +67,7 @@ class WoT(object):
 
         return all(item in td.to_dict().items() for item in fragment_dict.items())
 
-    def _build_local_discover_observable(self, thing_filter):
+    def _build_local_discover_observable(self, thing_filter: ThingFilterDict) -> Observable:
         """Builds an Observable to discover Things using the local method."""
 
         found_tds = [
@@ -73,7 +78,7 @@ class WoT(object):
 
         return Observable.of(*found_tds)
 
-    def _build_dnssd_discover_observable(self, thing_filter, dnssd_find_kwargs):
+    def _build_dnssd_discover_observable(self, thing_filter: ThingFilterDict, dnssd_find_kwargs: Dict[str, Any] | None) -> Observable:
         """Builds an Observable to discover Things using the multicast method based on DNS-SD."""
 
         if not is_dnssd_supported():
@@ -157,7 +162,7 @@ class WoT(object):
 
         return Observable.create(subscribe)
 
-    def discover(self, thing_filter, dnssd_find_kwargs=None):
+    def discover(self, thing_filter: ThingFilterDict, dnssd_find_kwargs: Dict[str, Any] | None = None) -> Observable:
         """Starts the discovery process that will provide ThingDescriptions
         that match the optional argument filter of type ThingFilter."""
 
@@ -191,7 +196,7 @@ class WoT(object):
         return Observable.merge(*observables)
 
     @classmethod
-    async def fetch(cls, url: str, timeout_secs: float | None = None):
+    async def fetch(cls, url: str, timeout_secs: float | None = None) -> str:
         """Accepts an url argument and returns a Future
         that resolves with a Thing Description string."""
 
@@ -207,7 +212,7 @@ class WoT(object):
 
         return td.to_str()
 
-    def consume(self, td_str):
+    def consume(self, td_str: str) -> ConsumedThing:
         """Accepts a thing description string argument and returns a
         ConsumedThing object instantiated based on that description."""
 
@@ -216,7 +221,7 @@ class WoT(object):
         return ConsumedThing(servient=self._servient, td=td)
 
     @classmethod
-    def thing_from_model(cls, model: str|ThingFragment|ConsumedThing):
+    def thing_from_model(cls, model: str | ThingFragment | ConsumedThing) -> Thing:
         """Takes a ThingModel and builds a Thing.
         Raises if the model has an unexpected type."""
 
@@ -233,7 +238,7 @@ class WoT(object):
 
         return thing
 
-    def produce(self, model: str|ThingFragment|ConsumedThing):
+    def produce(self, model: str | ThingFragment | ConsumedThing) -> ExposedThing:
         """Accepts a model argument of type ThingModel and returns an ExposedThing
         object, locally created based on the provided initialization parameters."""
 
@@ -243,7 +248,7 @@ class WoT(object):
 
         return exposed_thing
 
-    async def produce_from_url(self, url: str, timeout_secs: float | None = None):
+    async def produce_from_url(self, url: str, timeout_secs: float | None = None) -> ExposedThing:
         """Return a Future that resolves to an ExposedThing created
         from the thing description retrieved from the given URL."""
 
@@ -252,7 +257,7 @@ class WoT(object):
 
         return exposed_thing
 
-    async def consume_from_url(self, url: str, timeout_secs: float | None = None):
+    async def consume_from_url(self, url: str, timeout_secs: float | None = None) -> ConsumedThing:
         """Return a Future that resolves to a ConsumedThing created
         from the thing description retrieved from the given URL."""
 
@@ -261,7 +266,7 @@ class WoT(object):
 
         return consumed_thing
 
-    async def register(self, directory: str, thing: Thing | ExposedThing):
+    async def register(self, directory: str, thing: Thing | ExposedThing) -> None:
         """Generate the Thing Description as td, given the Properties,
         Actions and Events defined for this ExposedThing object.
         Then make a request to register the td to the given WoT Thing Directory.
@@ -270,11 +275,10 @@ class WoT(object):
             thing = thing.thing
 
         td = ThingDescription.from_thing(thing)
-        td = td.to_dict()
-        body = json.dumps(td)
-        print(body)
+        td_dict = td.to_dict()
+        body = json.dumps(td_dict)
         http_client = tornado.httpclient.AsyncHTTPClient()
-        href = directory+"/"+td["id"]
+        href = directory+"/"+td_dict["id"]
         try:
             http_request = tornado.httpclient.HTTPRequest(
                 url=href,
@@ -289,7 +293,7 @@ class WoT(object):
 
         response = await http_client.fetch(http_request)
 
-    async def unregister(self, directory: ConsumedThing, thing: ExposedThing):
+    async def unregister(self, directory: ConsumedThing, thing: ExposedThing) -> None:
         """Makes a request to unregister the thing from the given WoT Thing Directory."""
 
         raise NotImplementedError()

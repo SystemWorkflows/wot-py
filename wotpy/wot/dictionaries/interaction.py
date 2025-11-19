@@ -115,14 +115,6 @@ class ActionFragmentDict(InteractionFragmentDict):
 
         return DataSchemaDict.build(init) if init else None
 
-    @property
-    def synchronous(self):
-        """Indicates whether the Action is synchronous (True) or asynchronous (False)."""
-
-        init = self._init.get("synchronous")
-
-        return DataSchemaDict.build(init) if init else None
-
 class EventFragmentDict(InteractionFragmentDict):
     """A dictionary wrapper class that contains data to initialize an Event."""
 
