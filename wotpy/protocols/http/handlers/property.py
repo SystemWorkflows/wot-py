@@ -6,6 +6,7 @@ Request handler for Property interactions.
 """
 
 import asyncio
+import json
 import logging
 
 from tornado.web import RequestHandler
@@ -28,6 +29,8 @@ class PropertyReadWriteHandler(RequestHandler):
             value = str(value)
         if type(value) == str:
             value = "\"" + value + "\""
+        if type(value) == dict or type(value) == list:
+            value = json.dumps(value)
         print("value: ", value)
         self.write(value)#{"value": value})# should cover most cases
 
@@ -35,7 +38,7 @@ class PropertyReadWriteHandler(RequestHandler):
         """Updates the Property value."""
 
         exposed_thing = handler_utils.get_exposed_thing(self._server, thing_name)
-        value = handler_utils.get_argument(self, "value", self.request.body)
+        value = json.loads(self.request.body)
         await exposed_thing.properties[name].write(value)
 
 

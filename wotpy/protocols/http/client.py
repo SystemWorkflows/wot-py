@@ -171,8 +171,8 @@ class HTTPClient(BaseProtocolClient):
 
 
         sync = td.to_dict().get("actions", {}).get(name, {}).get("synchronous", True)
+        response = await http_client.fetch(http_request)
         if sync:
-            response = await http_client.fetch(http_request)
             return json.loads(response.body)
         else:
             invocation_url = json.loads(response.body).get("invocation")

@@ -46,6 +46,8 @@ if TYPE_CHECKING:
     from wotpy.wot.interaction import InteractionPattern
     from wotpy.wot.servient import Servient
 
+type JSONloaded = dict | str | int | float | bool | list | None
+type JSONdumped = str
 
 class ExposedThing(object):
     """An entity that serves to define the behavior of a Thing.
@@ -214,7 +216,7 @@ class ExposedThing(object):
 
         return ExposedThingEventDict(exposed_thing=self)
 
-    async def read_property(self, name: str) -> Any:
+    async def read_property(self, name: str) -> JSONloaded:#find a better way to do this
         """Takes the Property name as the name argument, then requests from
         the underlying platform and the Protocol Bindings to retrieve the
         Property on the remote Thing and return the result. Returns a Future
@@ -233,7 +235,7 @@ class ExposedThing(object):
         print("Read property '{}' with value: {}".format(name, value))
         return value
 
-    async def write_property(self, name: str, value: Any) -> None:
+    async def write_property(self, name: str, value: JSONloaded) -> None:
         """Takes the Property name as the name argument and the new value as the
         value argument, then requests from the underlying platform and the Protocol
         Bindings to update the Property on the remote Thing and return the result.
@@ -261,7 +263,7 @@ class ExposedThing(object):
         event_init = PropertyChangeEventInit(name=name, value=value)
         self._events_stream.on_next(PropertyChangeEmittedEvent(init=event_init))
 
-    async def invoke_action(self, name: str, input_value: Any = None) -> Any:
+    async def invoke_action(self, name: str, input_value: JSONloaded = None) -> Any:
         """Invokes an Action with the given parameters and yields with the invocation result."""
 
         action = self.thing.actions[name]
@@ -336,7 +338,7 @@ class ExposedThing(object):
 
         self._servient.remove_exposed_thing(self.thing.id)
 
-    def emit_event(self, event_name: str, payload: Any) -> None:
+    def emit_event(self, event_name: str, payload: JSONloaded) -> None:
         """Emits an the event initialized with the event name specified by
         the event_name argument and data specified by the payload argument."""
 

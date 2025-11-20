@@ -156,6 +156,7 @@ Brews one medium americano if no input is specified.""",
                     },
                 },
             },
+            "synchronous": True,
         },
         "setSchedule": {
             "description": """Add a scheduled task to the schedules property. Accepts drink id, size, quantity, time and mode as body of a request.
