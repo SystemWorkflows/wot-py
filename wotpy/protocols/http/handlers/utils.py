@@ -7,7 +7,7 @@ Request handler for Property interactions.
 
 import json
 
-from tornado.web import HTTPError
+from tornado.web import HTTPError, RequestHandler
 
 APPLICATION_JSON = "application/json"
 

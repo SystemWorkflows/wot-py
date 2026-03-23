@@ -21,6 +21,7 @@ class ActionInvokeHandler(RequestHandler):
 
     def initialize(self, http_server):
         self._server = http_server
+        self._logr = logging.getLogger(__name__)
 
     async def post(self, thing_name: str, name: str):
         """Invokes the action and returns the invocation result."""
@@ -35,6 +36,7 @@ class ActionInvokeHandler(RequestHandler):
                 result = str(result)
             if type(result) == str:
                 result = "\"" + result + "\""
+            self._logr.debug("Action result: {}".format(result))
             self.write(result)
 
         else: # asynchronous
@@ -43,6 +45,13 @@ class ActionInvokeHandler(RequestHandler):
             invocation_id = uuid.uuid4().hex
             self._server.pending_actions[invocation_id] = future_result
             self.write({"invocation": "/invocation/{}".format(invocation_id)})
+
+
+    async def options(self, thing_name: str, name: str):
+        # no body
+        # `*args` is for route with `path arguments` supports
+        self.set_status(204)
+        self.finish()
 
 
 class PendingInvocationHandler(RequestHandler):

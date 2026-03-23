@@ -42,6 +42,12 @@ class EventObserverHandler(RequestHandler):
         event_payload = await future_next
         self.write(event_payload)
 
+    async def head(self, thing_name, name):
+        # no body
+        # `*args` is for route with `path arguments` supports
+        self.set_status(204)
+        self.finish()
+
     def on_finish(self):
         """Destroys the subscription to the observable when the request finishes."""
 
